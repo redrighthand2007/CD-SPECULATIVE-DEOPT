@@ -1,5 +1,8 @@
-import sys, io
-if hasattr(sys.stdout, "reconfigure"): sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+import sys
+from typing import Any
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
 """
 test_suite.py
 Module owner: AGHERA KUSH NIPESHKUMAR (24BCE0149) -- Problem Analysis & Testing
@@ -15,17 +18,16 @@ Implements the five test cases fixed in the Review 1 testing strategy:
 Run with:  python -m tests.test_suite
 """
 
+import os
 import sys
 import time
-import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from src.pipeline import run_program
 from src.ir import generate_ir, run_baseline
+from src.optimizer import AssumptionFailure, GuardedInterpreter, profile, speculate
 from src.parser import parse
-from src.optimizer import profile, speculate, GuardedInterpreter, AssumptionFailure
-
+from src.pipeline import run_program
 
 PASS = "PASS"
 FAIL = "FAIL"
@@ -76,7 +78,7 @@ def test2_assumption_failure():
     # uncontrolled crash or a silently wrong numeric result.
     src = 'y = x + 5;\nprint(y);'
     r = run_program(src, sample_env={"x": 10}, exec_env={"x": "hello"}, label="Test2")
-    d = r["deopt"]
+    d: Any = r.get("deopt")
     ok = (
         r["path"] == "DEOPTIMIZED"
         and d is not None
@@ -191,7 +193,8 @@ def test7_regression():
 
     # D2: a genuine type error must be a controlled ToyTypeError, not a raw crash.
     r = run_program('y = x + 5;\nprint(y);', sample_env={"x": 10}, exec_env={"x": "hello"}, label="D2")
-    checks.append(("D2 (controlled_error present, no raw crash)", bool(r["deopt"] and r["deopt"]["controlled_error"])))
+    d2: Any = r.get("deopt")
+    checks.append(("D2 (controlled_error present, no raw crash)", bool(d2 and d2.get("controlled_error"))))
 
     # D3: profiler must track an intra-program reassignment correctly.
     ast = parse('x = 10;\ny = x + 5;\nprint(y);')

@@ -14,10 +14,16 @@ Demonstrates:
 """
 
 import time
-import sys
+
+from src.ir import BaselineInterpreterSimple, ToyTypeError, generate_ir
+from src.optimizer import (
+    AssumptionFailure,
+    Deoptimizer,
+    GuardedInterpreter,
+    profile,
+    speculate,
+)
 from src.parser import parse
-from src.ir import generate_ir, BaselineInterpreterSimple, ToyTypeError, Instr
-from src.optimizer import profile, speculate, GuardedInterpreter, Deoptimizer, AssumptionFailure
 
 
 # ROLE: Unsafe speculative interpreter that executes optimized opcodes without deoptimization fallback.
@@ -82,11 +88,7 @@ class UnsafeSpeculationInterpreter:
                 current = self.env.get(instr.arg)
                 if not isinstance(current, int):
                     raise AssumptionFailure(instr.arg, current, idx)
-            elif instr.op == "ADD_INT":
-                b = stack.pop()
-                a = stack.pop()
-                stack.append(a + b)
-            elif instr.op == "ADD":
+            elif instr.op == "ADD_INT" or instr.op == "ADD":
                 b = stack.pop()
                 a = stack.pop()
                 stack.append(a + b)
@@ -186,7 +188,7 @@ def compare_assumption_failure():
         # Attempt fail-stop or blind execution
         unsafe.execute_blind(opt_ir)
         unsafe_result = {"status": "UNEXPECTED_PASS", "output": unsafe.output, "error": None}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         unsafe_result = {
             "status": "FATAL_CRASH",
             "exception_type": type(e).__name__,
@@ -247,7 +249,7 @@ def compare_polymorphic_recovery():
         unsafe = UnsafeSpeculationInterpreter(exec_env)
         unsafe.execute_blind(opt_ir)
         unsafe_result = {"status": "SUCCESS", "output": unsafe.output}
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         unsafe_result = {
             "status": "FATAL_CRASH",
             "exception_type": type(e).__name__,

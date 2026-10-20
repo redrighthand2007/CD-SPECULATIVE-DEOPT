@@ -15,7 +15,7 @@ Optimized opcode additions (beyond the Review 1 baseline set):
     ADD_INT                -- unguarded, specialized integer add
 """
 
-from src.ir import Instr, BaselineInterpreterSimple, ToyTypeError, toy_add
+from src.ir import BaselineInterpreterSimple, Instr, ToyTypeError, toy_add
 
 
 # ROLE: Exception raised when a runtime type violates a speculative optimization assumption.
@@ -204,8 +204,8 @@ class Deoptimizer:
 
 
 if __name__ == "__main__":
-    from src.parser import parse
     from src.ir import generate_ir
+    from src.parser import parse
 
     prog = parse('x = 10;\ny = x + 5;\nprint(y);')
     base_ir = generate_ir(prog)

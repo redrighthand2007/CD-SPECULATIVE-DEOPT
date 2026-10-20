@@ -9,13 +9,21 @@ This is the module that demonstrates module-to-module integration for
 Review 2 Component 3 (Integration and Functional Prototype).
 """
 
+from typing import Any
+
+from src.ir import ToyTypeError, generate_ir, run_baseline
+from src.optimizer import (
+    AssumptionFailure,
+    Deoptimizer,
+    GuardedInterpreter,
+    profile,
+    speculate,
+)
 from src.parser import parse
-from src.ir import generate_ir, run_baseline, ToyTypeError
-from src.optimizer import profile, speculate, GuardedInterpreter, Deoptimizer, AssumptionFailure
 
 
 # ROLE: Coordinates the full end-to-end pipeline: parse -> baseline IR -> profile -> speculate -> guarded exec -> deopt fallback.
-def run_program(source: str, sample_env: dict, exec_env: dict, label: str = ""):
+def run_program(source: str, sample_env: dict, exec_env: dict, label: str = "") -> dict[str, Any]:
     """
     Runs one toy-language program through the full speculative pipeline.
 
@@ -26,7 +34,7 @@ def run_program(source: str, sample_env: dict, exec_env: dict, label: str = ""):
     Returns a result dict describing every stage, suitable for direct
     inclusion in the Review 2 & Review 3 test-case table.
     """
-    result = {"label": label, "source": source.strip()}
+    result: dict[str, Any] = {"label": label, "source": source.strip()}
 
     ast = parse(source)
     baseline_ir = generate_ir(ast)

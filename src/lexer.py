@@ -20,7 +20,7 @@ import re
 
 # ROLE: Data structure holding a single chopped token (e.g. NUMBER, ID, ASSIGN, PLUS) with its line number.
 class Token:
-    __slots__ = ("type", "value", "line")
+    __slots__ = ("line", "type", "value")
 
     # ROLE: Initializes the token with its category type, actual value, and source line number.
     def __init__(self, type_, value, line):

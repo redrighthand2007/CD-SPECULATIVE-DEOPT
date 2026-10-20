@@ -15,7 +15,7 @@ Baseline opcode set (fixed at Review 1):
     PRINT
 """
 
-from src.parser import Program, Assign, Print, BinOp, Literal, Var
+from src.parser import Assign, BinOp, Literal, Print, Program, Var
 
 
 # ROLE: Language-level type error raised when invalid types are added (e.g. str + int).
@@ -24,7 +24,6 @@ class ToyTypeError(Exception):
     Both the baseline and the generic (non-specialized) ADD path route
     through this so failures are always controlled and diagnosable,
     never an uncaught Python TypeError."""
-    pass
 
 
 # ROLE: Dynamic '+' operation: evaluates int+int or str+str, raising controlled ToyTypeError on mismatch.
@@ -40,7 +39,7 @@ def toy_add(a, b):
 
 # ROLE: Data class representing a single flat linear IR instruction (operation, operand, line number).
 class Instr:
-    __slots__ = ("op", "arg", "line")
+    __slots__ = ("arg", "line", "op")
 
     # ROLE: Initializes the IR instruction with opcode name, optional argument, and source line number.
     def __init__(self, op, arg=None, line=None):
@@ -67,7 +66,7 @@ def generate_ir(program: Program):
             gen_expr(node.right)
             ir.append(Instr("ADD"))
         else:
-            raise ValueError(f"Unknown expression node: {node}")
+            raise ValueError(f"Unknown expression node: {node}")  # noqa: TRY004
 
     for stmt in program.statements:
         if isinstance(stmt, Assign):
@@ -77,7 +76,7 @@ def generate_ir(program: Program):
             gen_expr(stmt.expr)
             ir.append(Instr("PRINT", None, stmt.line))
         else:
-            raise ValueError(f"Unknown statement node: {stmt}")
+            raise ValueError(f"Unknown statement node: {stmt}")  # noqa: TRY004
 
     return ir
 

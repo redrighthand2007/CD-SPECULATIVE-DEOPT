@@ -4,27 +4,30 @@ BCSE307P Compiler Design Project - Review 3 Final Test Suite & Evaluation
 Team 6 | Presenter: Aghera Kush Nipeshkumar (24BCE0149)
 """
 
-import sys
 import os
+import sys
 import time
 
 if hasattr(sys.stdout, "reconfigure"):
-    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, BASE_DIR)
 
-from src.parser import parse
-from src.ir import generate_ir, run_baseline, BaselineInterpreterSimple, ToyTypeError
-from src.optimizer import profile, speculate, GuardedInterpreter, Deoptimizer, AssumptionFailure
 from src.comparison_engine import (
     UnsafeSpeculationInterpreter,
-    benchmark_throughput,
-    compare_assumption_failure,
-    compare_polymorphic_recovery,
     compare_deopt_thrashing,
 )
+from src.ir import generate_ir, run_baseline
+from src.optimizer import (
+    AssumptionFailure,
+    Deoptimizer,
+    GuardedInterpreter,
+    profile,
+    speculate,
+)
+from src.parser import parse
 
 LINE = "-" * 90
 
@@ -54,7 +57,7 @@ def test_1():
     t_fast = (time.perf_counter() - t0) / n * 1_000_000
     
     print(f"Speculation : CHECK_INT emitted: {has_guard} | ADD_INT emitted: {has_add_int}")
-    print(f"Path Taken  : OPTIMIZED (0 deoptimizations)")
+    print("Path Taken  : OPTIMIZED (0 deoptimizations)")
     print(f"Output      : {output} (Expected: [15])")
     print(f"Throughput  : {t_fast:.2f} us per operation ({1_000_000/t_fast:,.0f} ops/sec)")
     print("Result      : [PASS]")
@@ -78,27 +81,25 @@ def test_2():
     try:
         unsafe = UnsafeSpeculationInterpreter(exec_env)
         unsafe.execute_blind(opt_ir)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         crash_msg = f"[CRASH] {type(e).__name__}: Raw ADD_INT cannot add str and int (VM aborted)"
     
     # Path B: With Deopt
     guarded = GuardedInterpreter(exec_env)
-    deopt_id = ""
     recovered_error = ""
     reconstructed_env = {}
     try:
         guarded.execute(opt_ir)
     except AssumptionFailure as fail:
         deopt = Deoptimizer()
-        meta, out = deopt.deoptimize("D000", opt_ir, base_ir, guarded.env, fail)
-        deopt_id = meta["deopt_id"]
+        meta, _out = deopt.deoptimize("D000", opt_ir, base_ir, guarded.env, fail)
         recovered_error = meta["controlled_error"]
         reconstructed_env = meta["variable_mapping"]
     
     print(f"Without Deopt : {crash_msg}")
     print(f"With Deopt    : [RECOVERED] Guard tripped -> Captured state: {reconstructed_env}")
     print(f"Fallback VM   : Resumed baseline -> Controlled report: \"{recovered_error}\"")
-    print(f"Process State : Zero fatal crashes; VM survived and handled error gracefully")
+    print("Process State : Zero fatal crashes; VM survived and handled error gracefully")
     print("Result        : [PASS]")
 
 
@@ -123,7 +124,7 @@ def test_3():
         guarded.execute(poly_opt_ir)
     except AssumptionFailure as fail:
         deopt = Deoptimizer()
-        meta, out = deopt.deoptimize("D_POLY", poly_opt_ir, poly_base_ir, guarded.env, fail)
+        _meta, out = deopt.deoptimize("D_POLY", poly_opt_ir, poly_base_ir, guarded.env, fail)
         rescued_output = out
         
     print(f"Without Deopt : {without_deopt_res}")
@@ -170,7 +171,7 @@ def test_5():
         ok = out == [expected]
         all_ok = all_ok and ok
         print(f" - Case {src.splitlines()[0]:<35} -> Output: {out} [OK]")
-    print(f"Boundary Integers: Verified large, zero, and negative values with 0 deopts")
+    print("Boundary Integers: Verified large, zero, and negative values with 0 deopts")
     print(f"Result           : {'[PASS]' if all_ok else '[FAIL]'}")
 
 
@@ -201,7 +202,7 @@ def test_6():
     print("Part A (Stable Hot Path - 200,000 Iterations):")
     print(f" - Baseline Time  : {t_base:.4f}s ({n_iter/t_base:,.0f} ops/sec)")
     print(f" - Optimized Time : {t_opt:.4f}s ({n_iter/t_opt:,.0f} ops/sec)")
-    print(f" - Deopts Count   : 0 (Stable loop never pays deopt penalty)")
+    print(" - Deopts Count   : 0 (Stable loop never pays deopt penalty)")
     
     # Part B: Low-Throughput Thrashing
     n_thrash = 5_000
@@ -210,7 +211,7 @@ def test_6():
     print(f" - Baseline Dynamic Throughput : {thrash['baseline_throughput']:,.0f} ops/sec")
     print(f" - Deopt Thrashing Throughput  : {thrash['thrashing_throughput']:,.0f} ops/sec")
     print(f" - Slowdown Factor             : {thrash['slowdown_factor']:.1f}x slower due to state reconstruction")
-    print(f" - Compiler Theory             : Proves why real JITs (V8) use Deopt Bailout to stop thrashing")
+    print(" - Compiler Theory             : Proves why real JITs (V8) use Deopt Bailout to stop thrashing")
     print("Result                         : [PASS]")
 
 
@@ -252,11 +253,12 @@ def test_8():
     print("[TEST 8] Regression Verification (Review 2 Defects D1 to D4)")
     
     checks = []
+    ast = parse("y = x + 5;\nprint(y);")
+    b_ir = generate_ir(ast)
+    o_ir = speculate(b_ir, {"x": "INT"})
+
     # D1: no IndexError
     try:
-        ast = parse("y = x + 5;\nprint(y);")
-        b_ir = generate_ir(ast)
-        o_ir = speculate(b_ir, {"x": "INT"})
         g = GuardedInterpreter({"x": "hello"})
         try:
             g.execute(o_ir)
@@ -273,7 +275,7 @@ def test_8():
     try:
         g.execute(o_ir)
     except AssumptionFailure as f:
-        meta, out = Deoptimizer().deoptimize("D2", o_ir, b_ir, g.env, f)
+        meta, _out = Deoptimizer().deoptimize("D2", o_ir, b_ir, g.env, f)
         checks.append(("D2 (controlled error present, no raw crash)", bool(meta.get("controlled_error"))))
         
     # D3: intra-program reassignment
